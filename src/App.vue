@@ -10,11 +10,31 @@
               nothing to display
           </div>
           <TodoList :todos="filteredTodos" @toggle-todo="toggleTodo" @delete-todo="deleteTodo"/>
+          <hr />
+          <nav aria-label="Page navigation example">
+              <ul class="pagination">
+                  <li class="page-item" v-if="currentPage !== 1" >
+                      <a class="page-link" @click="getTodos(currentPage - 1)" style="cursor: pointer">
+                          pre
+                      </a>
+                  </li>
+                  <li class="page-item" v-for="page in pageCount" :key="page" :class="currentPage === page ? 'active' : ''">
+                      <a class="page-link" @click="getTodos(page)" style="cursor: pointer">
+                          {{ page }}
+                      </a>
+                  </li>
+                  <li class="page-item" v-if="currentPage !== pageCount" >
+                      <a class="page-link" @click="getTodos(currentPage + 1)" style="cursor: pointer">
+                          next
+                      </a>
+                  </li>
+              </ul>
+          </nav>
       </div>
 </template>
 
 <script>
-import {computed, ref} from 'vue';
+import {computed, ref } from 'vue';
 import TodoSimpleForm from './components/TodoSimpleForm.vue';
 import TodoList from "@/components/TodoList.vue";
 import axios from "axios";
@@ -27,16 +47,29 @@ export default {
         TodoSimpleForm
     },
     setup(){
+        const todosCount = ref(0);
+        const currentPage = ref(1);
+        const limit = 5;
+        const pageCount = computed(() => {
+            return Math.ceil(todosCount.value / limit)
+        });
+
+        
+        
         const todoStyle = {
             textDecoration: 'line-through',
             color: 'gray'
         }
         const todos = ref([]);
         
-        const getTodos = async () => {
+        const getTodos = async (page = currentPage.value) => {
+            currentPage.value = page;
             try{
-                const res = await axios.get('http://localhost:3000/todos');
+                const res = await axios.get(
+                    `http://localhost:3000/todos?_page=${page}&_limit=${limit}`
+                );
                 todos.value = res.data;
+                todosCount.value = res.headers['x-total-count'];
             }catch (e) {
                 console.log(e);
             }
@@ -57,14 +90,29 @@ export default {
                 console.log(err)
             }
         };
-        const toggleTodo = (index) => {
+        const toggleTodo = async (index) => {
+            try{
+                const id = todos.value[index].id;
+                const res = await axios.patch('http://localhost:3000/todos/' + id, {
+                    completed: !todos.value[index].completed,
+                });
+                console.log(res);
+            } catch (err) {
+                console.log(err)
+            }
             todos.value[index].completed = !todos.value[index].completed;
         }
         const count = ref(1);
         const doubleCount = computed(() => {
             return count.value * 2;
         });
-        const deleteTodo = (index) => {
+        const deleteTodo = async (index) => {
+            try{
+                const id = todos.value[index].id;
+                await axios.delete('http://localhost:3000/todos/' + id);
+            } catch (err) {
+                console.log(err)
+            }
             todos.value.splice(index, 1);
         }
         const searchText = ref('');
@@ -87,6 +135,9 @@ export default {
             doubleCount,
             searchText,
             filteredTodos,
+            pageCount,
+            currentPage,
+            todosCount,
         };
     }
 }

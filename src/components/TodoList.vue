@@ -5,7 +5,7 @@
             class="card mt-2">
         <div class="card-body p-2 d-flex align-items-center">
             <div class="form-check flex-grow-1">
-                <input class="form-check-input" :value="todo.completed" @change="toggleTodo(index)"
+                <input class="form-check-input" :checked="todo.completed" @change="toggleTodo(index)"
                        type="checkbox">
                 <label class="form-check-label"
                        :class="{ todo: todo.completed }">{{ todo.subject }}</label>
