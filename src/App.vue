@@ -9,12 +9,27 @@
           <div v-if="!filteredTodos.length">
               nothing to display
           </div>
-          <TodoList :todos="filteredTodos" @toggle-todo="toggleTodo" @delete-todo="deleteTodo"/>
+          <TodoList :todos="filteredTodos" @toggle-todo="toggleTodo" @delete-todo="deleteTodo" />
+          <hr />
+          <nav aria-label="Page navigation example">
+              <ul class="pagination">
+                  <li v-if="currentPage !== 1" class="page-item">
+                      <a class="page-link" href="javascript:void(0)" @click="getTodos(currentPage -1)">Previous</a>
+                  </li>
+                  <li class="page-item" v-for="page in numberOfPages" :key="page"
+                  :class="currentPage === page ? 'active' : ''">
+                      <a class="page-link" href="javascript:void(0)" @click="getTodos(page)">{{page}}</a>
+                  </li>
+                  <li v-if="numberOfPages !== currentPage" class="page-item">
+                      <a class="page-link" href="javascript:void(0)" @click="getTodos(currentPage + 1)">Next</a>
+                  </li>
+              </ul>
+          </nav>
       </div>
 </template>
 
 <script>
-import {computed, ref} from 'vue';
+import {computed, ref, watchEffect} from 'vue';
 import TodoSimpleForm from './components/TodoSimpleForm.vue';
 import TodoList from "@/components/TodoList.vue";
 import axios from "axios";
@@ -32,10 +47,21 @@ export default {
             color: 'gray'
         }
         const todos = ref([]);
-        
-        const getTodos = async () => {
+        const numberOfTodos = ref(0);
+        const limit = 5;
+        const currentPage = ref(1);
+        watchEffect(() => {
+            console.log(currentPage.value);
+        })
+        const numberOfPages = computed(() =>{
+            return Math.ceil(numberOfTodos.value / limit);
+        });
+        const getTodos = async (page = currentPage.value) => {
+            currentPage.value = page;
             try{
-                const res = await axios.get('http://localhost:3000/todos');
+                const res = await axios.get(
+                    `http://localhost:3000/todos?_page=${page}&_limit=${limit}`);
+                numberOfTodos.value = res.headers['x-total-count'];
                 todos.value = res.data;
             }catch (e) {
                 console.log(e);
@@ -87,6 +113,8 @@ export default {
             doubleCount,
             searchText,
             filteredTodos,
+            numberOfPages,
+            currentPage,
         };
     }
 }
