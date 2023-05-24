@@ -2,7 +2,7 @@
       <div class="container">
             <h2>To-Do List</h2>
           <input class="form-control" type="text" v-model="searchText"
-                 placeholder="search">
+                 placeholder="search" @keyup.enter="searchTodo">
           <hr />
           <TodoSimpleForm @add-todo="addTodo" />
 
@@ -55,7 +55,7 @@ export default {
             currentPage.value = page;
             try{
                 const res = await axios.get(
-                    `http://localhost:3000/todos?subject_like=${searchText.value}&_page=${page}&_limit=${limit}`);
+                    `http://localhost:3000/todos?_sort=id&_order=desc&subject_like=${searchText.value}&_page=${page}&_limit=${limit}`);
                 numberOfTodos.value = res.headers['x-total-count'];
                 todos.value = res.data;
             }catch (e) {
@@ -68,12 +68,11 @@ export default {
             //db에 todo 저장. id는 자동생성. 비동기 통신 promise
             //응답이 왔을 때 .then()으로 받음
             try{
-                const res = await axios.post('http://localhost:3000/todos', {
+                await axios.post('http://localhost:3000/todos', {
                 subject: todo.subject,
                 completed: todo.completed,
                 });
-                //보낸 응답이 끝나고 이상 없으면 아래 코드 실행
-                todos.value.push(res.data);
+                getTodos(1);
             } catch (err) {
                 console.log(err)
             }
@@ -85,11 +84,30 @@ export default {
         const doubleCount = computed(() => {
             return count.value * 2;
         });
-        const deleteTodo = (index) => {
-            todos.value.splice(index, 1);
-        }
-        watch(searchText, () => {
+        const deleteTodo = async (index) => {
+            const id = todos.value[index].id;
+            try{
+                await axios.delete('http://localhost:3000/todos/' + id);
+                
+                getTodos(1);
+            } catch (err) {
+                console.log(err);
+            }
+
             getTodos(1);
+        }
+
+        const searchTodo = () => {
+            clearTimeout(timeout);
+            getTodos(1);
+        }
+        
+        let timeout = null
+        watch(searchText, () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                getTodos(1);
+            }, 2000);
         })
         // const filteredTodos = computed(() => {
         //     if(searchText.value){
@@ -112,6 +130,7 @@ export default {
             // filteredTodos,
             numberOfPages,
             currentPage,
+            searchTodo,
         };
     }
 }
